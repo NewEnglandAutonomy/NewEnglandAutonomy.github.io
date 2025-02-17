@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-<!-- Previous head and style sections remain the same -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +7,19 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
     <style>
-        /* Previous styles remain the same */
+        html, body { 
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        #map { 
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1;
+        }
         .debug-panel {
             position: absolute;
             top: 10px;
@@ -23,6 +34,23 @@
             overflow-y: auto;
             font-family: monospace;
             font-size: 12px;
+        }
+        .legend {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            line-height: 1.5;
+        }
+        .info-panel {
+            padding: 6px 8px;
+            background: white;
+            background: rgba(255,255,255,0.9);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+            max-width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
         }
     </style>
 </head>
@@ -41,7 +69,10 @@
         }
 
         // Initialize the map
-        const map = L.map('map').setView([20, 0], 3);
+        const map = L.map('map', {
+            minZoom: 2,
+            maxZoom: 18
+        }).setView([44.0, -70.0], 7); // Centered on New England
         log('Map initialized');
         
         // Add base maps
@@ -57,6 +88,7 @@
 
         // Layer groups for each data layer
         const layerGroups = {};
+        const overlayMaps = {};
         
         async function loadLayers() {
             try {
@@ -85,21 +117,21 @@
                         const geojsonLayer = L.geoJSON(data, {
                             style: function(feature) {
                                 return {
-                                    color: layerConfig.style.color,
-                                    weight: layerConfig.style.weight || 2,
-                                    opacity: layerConfig.style.opacity || 1,
-                                    fillOpacity: layerConfig.style.fillOpacity || 0.5
+                                    color: layerConfig.style?.color || '#3388ff',
+                                    weight: layerConfig.style?.weight || 2,
+                                    opacity: layerConfig.style?.opacity || 1,
+                                    fillOpacity: layerConfig.style?.fillOpacity || 0.5
                                 };
                             },
                             pointToLayer: function(feature, latlng) {
                                 if (layerConfig.type === 'point') {
                                     return L.circleMarker(latlng, {
-                                        radius: layerConfig.style.radius || 8,
-                                        fillColor: layerConfig.style.color,
-                                        color: layerConfig.style.outlineColor || "#000",
-                                        weight: layerConfig.style.weight || 1,
-                                        opacity: layerConfig.style.opacity || 1,
-                                        fillOpacity: layerConfig.style.fillOpacity || 0.8
+                                        radius: layerConfig.style?.radius || 8,
+                                        fillColor: layerConfig.style?.color || '#3388ff',
+                                        color: layerConfig.style?.outlineColor || "#000",
+                                        weight: layerConfig.style?.weight || 1,
+                                        opacity: layerConfig.style?.opacity || 1,
+                                        fillOpacity: layerConfig.style?.fillOpacity || 0.8
                                     });
                                 }
                             },
@@ -118,21 +150,20 @@
 
                         log(`Created GeoJSON layer for ${name}`);
                         layerGroups[name] = L.layerGroup([geojsonLayer]);
+                        overlayMaps[layerConfig.title || name] = layerGroups[name];
                         layerGroups[name].addTo(map);
                         log(`Added ${name} to map`);
-
-                        // Try to fit bounds
-                        const bounds = geojsonLayer.getBounds();
-                        if (bounds.isValid()) {
-                            map.fitBounds(bounds);
-                            log(`Fitted map to bounds of ${name}`);
-                        }
-
                     } catch (error) {
                         log(`Error loading layer ${name}: ${error.message}`);
                         console.error(`Error loading layer ${name}:`, error);
                     }
                 }
+
+                // Add layer control after all layers are loaded
+                L.control.layers(baseMaps, overlayMaps, {
+                    collapsed: false
+                }).addTo(map);
+                log('Added layer control');
 
             } catch (error) {
                 log(`Error: ${error.message}`);
