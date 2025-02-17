@@ -29,7 +29,7 @@
         }).addTo(map);
 
         // Try to load just one GeoJSON file
-        fetch('data/ME_WIC_Farmstands.geojson')
+        fetch('data/ME_WIC_Farmstands_wgs.geojson')
             .then(response => response.json())
             .then(data => {
                 L.geoJSON(data, {
