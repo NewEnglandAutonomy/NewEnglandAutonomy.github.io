@@ -6,14 +6,6 @@ initial_view:
 
 # Layer definitions
 layers:
-  New_England_States:
-    title: "New England States"
-    file: "data/New_England_states_wgs.geojson"
-    type: "polygon"
-    style:
-      color: "#1f78b4"
-      fillOpacity: 0.1
-
   ME_WIC_Farmstands:
     title: "ME WIC Farmstands"
     file: "data/ME_WIC_Farmstands_wgs.geojson"
