@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- Previous head section remains the same -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEAM Map Viewer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0; 
+        }
+        #map { 
+            height: 100vh; 
+            width: 100vw; 
+        }
+        .legend {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            line-height: 1.5;
+        }
+        .legend-item {
+            margin-bottom: 5px;
+        }
+        .legend-color {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 5px;
+            border: 1px solid #000;
+            vertical-align: middle;
+        }
+        .info-panel {
+            padding: 6px 8px;
+            background: white;
+            background: rgba(255,255,255,0.9);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+            max-width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .error-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([20, 0], 3);
+        
+        // Add base maps
+        const baseMaps = {
+            'OpenStreetMap': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap contributors'
+            }),
+            'OpenTopoMap': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                maxZoom: 17,
+                attribution: '© OpenTopoMap contributors'
+            }),
+            'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                attribution: '© Esri'
+            })
+        };
+
+        // Add default base map
+        baseMaps['OpenStreetMap'].addTo(map);
+
+        // Layer groups for each data layer
+        const layerGroups = {};
+        
+        // Create legend control
+        const legend = L.control({position: 'bottomright'});
+        legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = '<h4>Legend</h4>';
+            return div;
+        };
+        legend.addTo(map);
+
+        // Function to update legend
+        function updateLegend(layers) {
+            const legendDiv = document.querySelector('.legend');
+            let legendContent = '<h4>Legend</h4>';
+            
+            Object.entries(layers).forEach(([name, config]) => {
+                legendContent += `
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: ${config.style.color}"></span>
+                        ${config.title || name}
+                    </div>`;
+            });
+            
+            legendDiv.innerHTML = legendContent;
+        }
+
+        // Function to format property values
+        function formatValue(value) {
+            if (typeof value === 'number') {
+                // Format numbers with up to 2 decimal places
+                return Number.isInteger(value) ? value : value.toFixed(2);
+            }
+            return value;
+        }
+
+        // Function to create popup content
+        function createPopupContent(feature, layerConfig) {
+            let popupContent = '<div class="info-panel">';
+            popupContent += `<h4>${layerConfig.title || name}</h4>`;
+            
+            // Get properties to display
+            const properties = layerConfig.properties || Object.keys(feature.properties);
+            
+            // Sort properties alphabetically (optional)
+            properties.sort();
+            
+            // Add each property to the popup
+            properties.forEach(key => {
+                if (feature.properties.hasOwnProperty(key)) {
+                    const value = formatValue(feature.properties[key]);
+                    // Skip null or undefined values
+                    if (value != null) {
+                        popupContent += `<strong>${key}:</strong> ${value}<br>`;
+                    }
+                }
+            });
+            
+            popupContent += '</div>';
+            return popupContent;
+        }
+
+        // Function to show error message
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.innerHTML = `<h3>Error</h3><p>${message}</p>`;
+            document.body.appendChild(errorDiv);
+        }
+
+        // Function to load layer configuration and data
+        async function loadLayers() {
+            try {
+                // Load YAML configuration
+                const response = await fetch('config.yml');
+                if (!response.ok) {
+                    throw new Error('Failed to load configuration file');
+                }
+                const yamlText = await response.text();
+                const config = jsyaml.load(yamlText);
+
+                // Create overlay layers object for the layer control
+                const overlayLayers = {};
+
+                // Process each layer
+                for (const [name, layerConfig] of Object.entries(config.layers)) {
+                    // Create a layer group
+                    layerGroups[name] = L.layerGroup();
+                    overlayLayers[layerConfig.title || name] = layerGroups[name];
+
+                    try {
+                        const response = await fetch(layerConfig.file);
+                        if (!response.ok) {
+                            throw new Error(`Failed to load ${layerConfig.file}`);
+                        }
+                        const data = await response.json();
+                        
+                        const layer = L.geoJSON(data, {
+                            style: function(feature) {
+                                return {
+                                    color: layerConfig.style.color,
+                                    weight: layerConfig.style.weight || 2,
+                                    opacity: layerConfig.style.opacity || 1,
+                                    fillOpacity: layerConfig.style.fillOpacity || 0.5
+                                };
+                            },
+                            pointToLayer: function(feature, latlng) {
+                                if (layerConfig.type === 'point') {
+                                    return L.circleMarker(latlng, {
+                                        radius: layerConfig.style.radius || 8,
+                                        fillColor: layerConfig.style.color,
+                                        color: layerConfig.style.outlineColor || "#000",
+                                        weight: layerConfig.style.weight || 1,
+                                        opacity: layerConfig.style.opacity || 1,
+                                        fillOpacity: layerConfig.style.fillOpacity || 0.8
+                                    });
+                                }
+                            },
+                            onEachFeature: function(feature, layer) {
+                                if (feature.properties) {
+                                    const popupContent = createPopupContent(feature, layerConfig);
+                                    layer.bindPopup(popupContent);
+                                }
+                            }
+                        }).addTo(layerGroups[name]);
+
+                        // Add the layer group to the map
+                        if (layerConfig.visible !== false) {
+                            layerGroups[name].addTo(map);
+                        }
+                    } catch (error) {
+                        console.error(`Error loading layer ${name}:`, error);
+                        showError(`Error loading layer ${name}: ${error.message}`);
+                    }
+                }
+
+                // Add layer control
+                L.control.layers(baseMaps, overlayLayers).addTo(map);
+
+                // Update legend
+                updateLegend(config.layers);
+
+                // Set initial map view if specified in config
+                if (config.initial_view) {
+                    map.setView(
+                        [config.initial_view.lat, config.initial_view.lng],
+                        config.initial_view.zoom
+                    );
+                } else {
+                    // Fit map to all data
+                    const bounds = [];
+                    Object.values(layerGroups).forEach(group => {
+                        const layerBounds = group.getBounds();
+                        if (layerBounds.isValid()) {
+                            bounds.push(layerBounds);
+                        }
+                    });
+                    
+                    if (bounds.length > 0) {
+                        map.fitBounds(L.latLngBounds(bounds));
+                    }
+                }
+
+            } catch (error) {
+                console.error("Error loading configuration:", error);
+                showError(`Error loading map configuration: ${error.message}`);
+                }
+            }
+
+            // Load layers when the page loads
+            loadLayers();
+        </script>
+    </body>
+</html>
