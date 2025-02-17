@@ -1,46 +1,35 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Directory Map Viewer</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
     <style>
-        html, body { 
-            height: 100%;
+        body {
             margin: 0;
             padding: 0;
         }
-        #map { 
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 1;
-        }
-        .debug-panel {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 1000;
-            background: white;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.2);
-            max-width: 300px;
-            max-height: 200px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 12px;
+        #map {
+            width: 100vw;
+            height: 100vh;
         }
         .legend {
+            padding: 6px 8px;
             background: white;
-            padding: 10px;
-            border-radius: 5px;
+            background: rgba(255,255,255,0.8);
             box-shadow: 0 0 15px rgba(0,0,0,0.2);
-            line-height: 1.5;
+            border-radius: 5px;
+        }
+        .legend-item {
+            margin-bottom: 5px;
+        }
+        .legend-color {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 5px;
+            border: 1px solid #000;
+            vertical-align: middle;
         }
         .info-panel {
             padding: 6px 8px;
@@ -56,65 +45,83 @@
 </head>
 <body>
     <div id="map"></div>
-    <div id="debug" class="debug-panel">Loading...</div>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
     <script>
-        // Debug logging function
-        function log(message) {
-            const debug = document.getElementById('debug');
-            const time = new Date().toLocaleTimeString();
-            debug.innerHTML += `<div>[${time}] ${message}</div>`;
-            console.log(`[${time}] ${message}`);
-        }
-
         // Initialize the map
-        const map = L.map('map', {
-            minZoom: 2,
-            maxZoom: 18
-        }).setView([44.0, -70.0], 7); // Centered on New England
-        log('Map initialized');
+        const map = L.map('map').setView([44.0, -70.0], 7);  // Centered on New England
         
         // Add base maps
         const baseMaps = {
             'OpenStreetMap': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© OpenStreetMap contributors'
+            }),
+            'OpenTopoMap': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                maxZoom: 17,
+                attribution: '© OpenTopoMap contributors'
+            }),
+            'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                attribution: '© Esri'
             })
         };
 
+        // Add default base map
         baseMaps['OpenStreetMap'].addTo(map);
-        log('Base map added');
 
-        // Layer groups for each data layer
+        // Layer groups and controls
         const layerGroups = {};
         const overlayMaps = {};
         
+        // Create legend control
+        const legend = L.control({position: 'bottomright'});
+        legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = '<h4>Legend</h4>';
+            return div;
+        };
+
+        // Function to update legend
+        function updateLegend(layers) {
+            const legendDiv = document.querySelector('.legend');
+            let legendContent = '<h4>Legend</h4>';
+            
+            Object.entries(layers).forEach(([name, config]) => {
+                legendContent += `
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: ${config.style.color}"></span>
+                        ${config.title || name}
+                    </div>`;
+            });
+            
+            legendDiv.innerHTML = legendContent;
+        }
+
         async function loadLayers() {
             try {
-                log('Loading configuration file...');
+                // Load YAML configuration
                 const response = await fetch('config.yml');
-                if (!response.ok) {
-                    throw new Error(`Failed to load configuration file: ${response.status} ${response.statusText}`);
-                }
                 const yamlText = await response.text();
-                log('YAML text loaded, parsing...');
-                
                 const config = jsyaml.load(yamlText);
-                log(`Found ${Object.keys(config.layers).length} layers in config`);
 
                 // Process each layer
                 for (const [name, layerConfig] of Object.entries(config.layers)) {
-                    log(`Loading layer: ${name}`);
                     try {
                         const dataResponse = await fetch(layerConfig.file);
-                        if (!dataResponse.ok) {
-                            throw new Error(`Failed to load ${layerConfig.file}: ${dataResponse.status} ${dataResponse.statusText}`);
-                        }
                         const data = await dataResponse.json();
-                        log(`Loaded GeoJSON for ${name}: ${data.features.length} features`);
-
+                        
                         const geojsonLayer = L.geoJSON(data, {
+                            pointToLayer: (feature, latlng) => {
+                                return L.circleMarker(latlng, {
+                                    radius: layerConfig.style?.radius || 8,
+                                    fillColor: layerConfig.style?.color || '#ff7800',
+                                    color: layerConfig.style?.outlineColor || "#000",
+                                    weight: layerConfig.style?.weight || 1,
+                                    opacity: layerConfig.style?.opacity || 1,
+                                    fillOpacity: layerConfig.style?.fillOpacity || 0.8
+                                });
+                            },
                             style: function(feature) {
                                 return {
                                     color: layerConfig.style?.color || '#3388ff',
@@ -123,24 +130,14 @@
                                     fillOpacity: layerConfig.style?.fillOpacity || 0.5
                                 };
                             },
-                            pointToLayer: function(feature, latlng) {
-                                if (layerConfig.type === 'point') {
-                                    return L.circleMarker(latlng, {
-                                        radius: layerConfig.style?.radius || 8,
-                                        fillColor: layerConfig.style?.color || '#3388ff',
-                                        color: layerConfig.style?.outlineColor || "#000",
-                                        weight: layerConfig.style?.weight || 1,
-                                        opacity: layerConfig.style?.opacity || 1,
-                                        fillOpacity: layerConfig.style?.fillOpacity || 0.8
-                                    });
-                                }
-                            },
                             onEachFeature: function(feature, layer) {
                                 if (feature.properties) {
                                     let popupContent = '<div class="info-panel">';
                                     popupContent += `<h4>${layerConfig.title || name}</h4>`;
                                     for (const [key, value] of Object.entries(feature.properties)) {
-                                        popupContent += `<strong>${key}:</strong> ${value}<br>`;
+                                        if (value != null) {
+                                            popupContent += `<strong>${key}:</strong> ${value}<br>`;
+                                        }
                                     }
                                     popupContent += '</div>';
                                     layer.bindPopup(popupContent);
@@ -148,25 +145,25 @@
                             }
                         });
 
-                        log(`Created GeoJSON layer for ${name}`);
                         layerGroups[name] = L.layerGroup([geojsonLayer]);
                         overlayMaps[layerConfig.title || name] = layerGroups[name];
-                        layerGroups[name].addTo(map);
-                        log(`Added ${name} to map`);
+                        
+                        if (layerConfig.visible !== false) {
+                            layerGroups[name].addTo(map);
+                        }
                     } catch (error) {
-                        log(`Error loading layer ${name}: ${error.message}`);
                         console.error(`Error loading layer ${name}:`, error);
                     }
                 }
 
-                // Add layer control after all layers are loaded
+                // Add layer control and legend
                 L.control.layers(baseMaps, overlayMaps, {
                     collapsed: false
                 }).addTo(map);
-                log('Added layer control');
+                legend.addTo(map);
+                updateLegend(config.layers);
 
             } catch (error) {
-                log(`Error: ${error.message}`);
                 console.error("Error loading configuration:", error);
             }
         }

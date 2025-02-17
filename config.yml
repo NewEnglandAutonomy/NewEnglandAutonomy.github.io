@@ -1,59 +1,33 @@
-# Map configuration
-initial_view:
-  lat: 20
-  lng: 0
-  zoom: 3
-
 # Layer definitions
 layers:
-  ME_WIC_Farmstands:
-    title: "ME WIC Farmstands"
+  me_wic_farmstands:
+    title: "Maine WIC Farmstands"
     file: "data/ME_WIC_Farmstands_wgs.geojson"
     type: "point"
-    visible: true
     style:
       color: "#ff7800"
       radius: 8
-      weight: 1
-      opacity: 1
-      fillOpacity: 0.8
-      outlineColor: "#000"
 
-  New_England_shelters:
-    title: "New England shelters (privately run)"
-    file: "data/New_England_shelters_privately_run_wgs.geojson"
+  new_england_shelters:
+    title: "New England Shelters"
+    file: "data/New_England_shelters.geojson"
     type: "point"
-    visible: true
     style:
-      color: "#1d5982"
-      radius: 8
-      weight: 1
-      opacity: 1
-      fillOpacity: 0.8
-      outlineColor: "#000"
+      color: "#2ca25f"
+      radius: 6
 
-  New_England_SNAP_Vendors:
-    title: "New England SNAP Vendors"
-    file: "data/New_England_SNAP_Vendors_wgs.geojson"
+  snap_vendors:
+    title: "SNAP Vendors"
+    file: "data/New_England_SNAP_Vendors.geojson"
     type: "point"
-    visible: true
     style:
-      color: "#835649"
-      radius: 8
-      weight: 1
-      opacity: 1
-      fillOpacity: 0.8
-      outlineColor: "#000"
+      color: "#1f78b4"
+      radius: 4
 
-  New_England_WIC_Vendors:
-    title: "New England WIC Vendors"
-    file: "data/New_England_WIC_Vendors_wgs.geojson"
+  wic_vendors:
+    title: "WIC Vendors"
+    file: "data/New_England_WIC_Vendors.geojson"
     type: "point"
-    visible: true
     style:
-      color: "#e81b2b"
-      radius: 8
-      weight: 1
-      opacity: 1
-      fillOpacity: 0.8
-      outlineColor: "#000"
+      color: "#e31a1c"
+      radius: 4
