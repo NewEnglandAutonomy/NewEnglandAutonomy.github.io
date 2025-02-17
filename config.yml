@@ -6,7 +6,7 @@ layers:
     type: "point"
     style:
       color: "#ff7800"
-      radius: 8
+      radius: 4
 
   new_england_shelters:
     title: "New England Shelters"
@@ -14,7 +14,7 @@ layers:
     type: "point"
     style:
       color: "#2ca25f"
-      radius: 6
+      radius: 4
 
   snap_vendors:
     title: "SNAP Vendors"
