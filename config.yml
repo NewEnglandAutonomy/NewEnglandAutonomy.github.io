@@ -8,15 +8,15 @@ initial_view:
 layers:
   New_England_States:
     title: "New England States"
-    file: "data/New_England_states_utm.geojson"
+    file: "data/New_England_states_wgs.geojson"
     type: "polygon"
     style:
       color: "#1f78b4"
-      fillOpacity: 0.5
+      fillOpacity: 0.1
 
   ME_WIC_Farmstands:
     title: "ME WIC Farmstands"
-    file: "data/ME_WIC_Farmstands_utm.geojson"
+    file: "data/ME_WIC_Farmstands_wgs.geojson"
     type: "point"
     visible: true
     style:
@@ -29,7 +29,7 @@ layers:
 
   New_England_shelters:
     title: "New England shelters (privately run)"
-    file: "data/New_England_shelters_privately_run_utm.geojson"
+    file: "data/New_England_shelters_privately_run_wgs.geojson"
     type: "point"
     visible: true
     style:
@@ -42,7 +42,7 @@ layers:
 
   New_England_SNAP_Vendors:
     title: "New England SNAP Vendors"
-    file: "data/New_England_SNAP_Vendors_utm.geojson"
+    file: "data/New_England_SNAP_Vendors_wgs.geojson"
     type: "point"
     visible: true
     style:
@@ -55,7 +55,7 @@ layers:
 
   New_England_WIC_Vendors:
     title: "New England WIC Vendors"
-    file: "data/New_England_WIC_Vendors_utm.geojson"
+    file: "data/New_England_WIC_Vendors_wgs.geojson"
     type: "point"
     visible: true
     style:
@@ -65,4 +65,3 @@ layers:
       opacity: 1
       fillOpacity: 0.8
       outlineColor: "#000"
-
