@@ -46,7 +46,7 @@ layers:
     type: "point"
     visible: true
     style:
-      color: "#1d5982"
+      color: "#835649"
       radius: 8
       weight: 1
       opacity: 1
@@ -59,7 +59,7 @@ layers:
     type: "point"
     visible: true
     style:
-      color: "#1d5982"
+      color: "#e81b2b"
       radius: 8
       weight: 1
       opacity: 1
