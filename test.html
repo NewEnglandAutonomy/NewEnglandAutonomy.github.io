@@ -13,27 +13,59 @@
             height: 100vh;
             background: #f0f0f0;
         }
+        #debug {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
+    <div id="debug">Loading...</div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
     <script>
+        function log(message) {
+            console.log(message);
+            const debug = document.getElementById('debug');
+            debug.innerHTML += `<br>${message}`;
+        }
+
         // Create the map
         const map = L.map('map').setView([44.0, -70.0], 7);
+        log('Map initialized');
         
         // Add the OpenStreetMap tiles
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
+        log('Base map added');
 
-        // Try to load just one GeoJSON file
+        // Try to load the GeoJSON file
+        log('Attempting to load GeoJSON...');
         fetch('data/ME_WIC_Farmstands_wgs.geojson')
-            .then(response => response.json())
+            .then(response => {
+                log(`Fetch response status: ${response.status}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
+                log(`GeoJSON loaded, features: ${data.features.length}`);
+                
+                // Log the first feature to see its structure
+                log('First feature structure: ' + JSON.stringify(data.features[0], null, 2));
+                
                 L.geoJSON(data, {
                     pointToLayer: (feature, latlng) => {
+                        log(`Creating point at ${latlng.lat}, ${latlng.lng}`);
                         return L.circleMarker(latlng, {
                             radius: 8,
                             fillColor: "#ff7800",
@@ -44,8 +76,12 @@
                         });
                     }
                 }).addTo(map);
+                log('GeoJSON layer added to map');
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => {
+                log('Error: ' + error.message);
+                console.error('Error:', error);
+            });
     </script>
 </body>
 </html>
