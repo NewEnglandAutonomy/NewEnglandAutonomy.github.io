@@ -8,12 +8,20 @@ layers:
       color: "#ff7800"
       radius: 4
 
-  new_england_shelters:
-    title: "New England Shelters"
-    file: "data/New_England_shelters.geojson"
+  //new_england_shelters:
+    //title: "New England Shelters"
+    //file: "data/New_England_shelters.geojson"
+    //type: "point"
+    //style:
+      //color: "#2ca25f"
+      //radius: 4
+      
+  food_resources:
+    title: "Food Resources"
+    file: data/New_England_Food_Resources.geojson"
     type: "point"
     style:
-      color: "#2ca25f"
+      color: "#c9a0dc"
       radius: 4
 
   snap_vendors:
